@@ -8,7 +8,7 @@ namespace Blockbuster.API.Models;
 public class Movie
 {
     /** Id: Identificador unico de la pelicula
-     *En firestores, es el documento ID (autogenera)
+     *  En firestores, es el documento ID (autogenera)
      * Ejemplo: movie_001, etc...
     */
 
