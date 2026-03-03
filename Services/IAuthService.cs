@@ -54,6 +54,12 @@ public interface IAuthService
     *   - Pass es incorrecto
     * 
     */
-   
    Task<(User user, string token)> Login(LoginDto loginDto);
+   
+   Task<bool> ValidateToken(string token);
+
+   Task<User?> GetUserById(string userId);
+   
+   string GenerateJwtToken(User user);
+
 }
