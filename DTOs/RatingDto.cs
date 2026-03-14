@@ -23,6 +23,12 @@ public class RatingDto
     public string MovieId { get; set; } = string.Empty;
     
     /**
+    * MovieTitle para mostrar rápidamente de qué película es
+    * El frontend no tiene que hacer otra llamada para saberlo
+    */
+    public string MovieTitle { get; set; } = string.Empty;
+    
+    /**
      * Score la calificacion de 1-10
      * El frontend valida que este entre 1 y 10
      */

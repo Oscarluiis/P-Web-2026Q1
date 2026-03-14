@@ -75,5 +75,10 @@ public class Movie
      * Solo admins pueden agregar peliculas
      */
     public string CreatedBy { get; set; } = string.Empty;
-
+    
+    /**
+     * TotalRatings: Cantidad total de calificaciones recibidas
+       Se incrementa cada vez que un usuario califica la película
+     */
+    public int TotalRatings { get; set; }
 }

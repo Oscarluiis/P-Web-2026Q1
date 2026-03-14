@@ -162,7 +162,7 @@ public class FirebaseService
          * Es como un apuntador a la coleccion
          * 
          */
-        return _firestoreDb.Collection("collectionName");
+        return _firestoreDb.Collection(collectionName);
 
     }
 }

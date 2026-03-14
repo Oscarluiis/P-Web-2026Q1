@@ -45,5 +45,6 @@ public class MovieDto
     /**
      * TotalRating cuantas personas la ha calificado (la pelicula)
      */
-    public int TotalRating { get; set; }
+    public int TotalRatings { get; set; }
+    
 }
