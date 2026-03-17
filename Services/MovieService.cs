@@ -1,18 +1,16 @@
 using Blockbuster.API.DTOs;
 using Blockbuster.API.Models;
-
-namespace Blockbuster.API.Services;
-
-
 using Google.Cloud.Firestore;
 
-public class MovieService : IMovieService
+namespace Blockbuster.API.Services
 {
     /// <summary>
     /// MovieService implementa la gestión de películas
     /// Permite obtener, crear, editar y eliminar películas
     /// Solo administradores pueden crear, editar y eliminar
     /// </summary>
+    public class MovieService : IMovieService
+    {
         private readonly FirebaseService _firebaseService;
 
         /// <summary>
@@ -26,12 +24,6 @@ public class MovieService : IMovieService
 
         /// <summary>
         /// GetAllMovies: Obtiene todas las películas (con filtro opcional por género)
-        /// 
-        /// Proceso:
-        /// 1. Obtener la colección "movies" de Firestore
-        /// 2. Si se especifica género, filtrar
-        /// 3. Convertir documentos a MovieDto
-        /// 4. Devolver lista
         /// </summary>
         public async Task<List<MovieDto>> GetAllMovies(string? genre = null)
         {
@@ -54,7 +46,8 @@ public class MovieService : IMovieService
                 var movies = new List<MovieDto>();
                 foreach (var doc in snapshot.Documents)
                 {
-                    var movie = doc.ConvertTo<Movie>();
+                    var movieDict = doc.ToDictionary();
+                    var movie = ConvertDictToMovie(movieDict);
                     movies.Add(ConvertToDto(movie));
                 }
 
@@ -69,12 +62,6 @@ public class MovieService : IMovieService
 
         /// <summary>
         /// GetMovieById: Obtiene una película específica por su ID
-        /// 
-        /// Proceso:
-        /// 1. Acceder al documento por ID
-        /// 2. Verificar que existe
-        /// 3. Convertir a MovieDto
-        /// 4. Devolver
         /// </summary>
         public async Task<MovieDto?> GetMovieById(string movieId)
         {
@@ -90,7 +77,8 @@ public class MovieService : IMovieService
                 }
 
                 // Convertir a Movie y luego a MovieDto
-                var movie = doc.ConvertTo<Movie>();
+                var movieDict = doc.ToDictionary();
+                var movie = ConvertDictToMovie(movieDict);
                 return ConvertToDto(movie);
             }
             catch (Exception ex)
@@ -102,19 +90,12 @@ public class MovieService : IMovieService
 
         /// <summary>
         /// CreateMovie: Crea una nueva película (solo admin)
-        /// 
-        /// Proceso:
-        /// 1. Validar que los datos requeridos existen
-        /// 2. Generar ID si no lo tiene
-        /// 3. Establecer CreatedAt y CreatedBy
-        /// 4. Guardar en Firestore
-        /// 5. Devolver la película creada
         /// </summary>
         public async Task<Movie> CreateMovie(Movie movie, string adminId)
         {
             try
             {
-                // Validar que los campos requeridos no estén vacíos
+                // Validar que los datos requeridos existen
                 if (string.IsNullOrWhiteSpace(movie.Title))
                 {
                     throw new ArgumentException("El título es requerido");
@@ -139,9 +120,23 @@ public class MovieService : IMovieService
                 movie.AverageRating = 0;
                 movie.TotalRatings = 0;
 
-                // Guardar en Firestore
+                // Guardar en Firestore usando Dictionary
+                var movieData = new Dictionary<string, object>
+                {
+                    { "Id", movie.Id },
+                    { "Title", movie.Title },
+                    { "Description", movie.Description },
+                    { "Genre", movie.Genre },
+                    { "ReleaseYear", movie.ReleaseYear },
+                    { "PosterUrl", movie.PosterUrl },
+                    { "AverageRating", movie.AverageRating },
+                    { "TotalRatings", movie.TotalRatings },
+                    { "CreatedAt", movie.CreatedAt },
+                    { "CreatedBy", movie.CreatedBy }
+                };
+
                 var moviesCollection = _firebaseService.GetCollection("movies");
-                await moviesCollection.Document(movie.Id).SetAsync(movie);
+                await moviesCollection.Document(movie.Id).SetAsync(movieData);
 
                 Console.WriteLine($"Película creada: {movie.Title} ({movie.Id})");
                 return movie;
@@ -155,12 +150,6 @@ public class MovieService : IMovieService
 
         /// <summary>
         /// UpdateMovie: Edita una película existente (solo admin)
-        /// 
-        /// Proceso:
-        /// 1. Verificar que la película existe
-        /// 2. Actualizar los campos permitidos
-        /// 3. Guardar en Firestore
-        /// 4. Devolver película actualizada
         /// </summary>
         public async Task<Movie> UpdateMovie(string movieId, Movie movie, string adminId)
         {
@@ -182,7 +171,8 @@ public class MovieService : IMovieService
                 }
 
                 // Obtener la película existente para preservar campos de auditoría
-                var existingMovie = existingDoc.ConvertTo<Movie>();
+                var existingDict = existingDoc.ToDictionary();
+                var existingMovie = ConvertDictToMovie(existingDict);
 
                 // Actualizar solo los campos permitidos
                 existingMovie.Title = movie.Title ?? existingMovie.Title;
@@ -191,11 +181,22 @@ public class MovieService : IMovieService
                 existingMovie.ReleaseYear = movie.ReleaseYear > 0 ? movie.ReleaseYear : existingMovie.ReleaseYear;
                 existingMovie.PosterUrl = movie.PosterUrl ?? existingMovie.PosterUrl;
 
-                // No actualizar CreatedAt, CreatedBy, AverageRating, TotalRatings
-                // Esos se controlan automáticamente
+                // Guardar cambios usando Dictionary
+                var movieData = new Dictionary<string, object>
+                {
+                    { "Id", existingMovie.Id },
+                    { "Title", existingMovie.Title },
+                    { "Description", existingMovie.Description },
+                    { "Genre", existingMovie.Genre },
+                    { "ReleaseYear", existingMovie.ReleaseYear },
+                    { "PosterUrl", existingMovie.PosterUrl },
+                    { "AverageRating", existingMovie.AverageRating },
+                    { "TotalRatings", existingMovie.TotalRatings },
+                    { "CreatedAt", existingMovie.CreatedAt },
+                    { "CreatedBy", existingMovie.CreatedBy }
+                };
 
-                // Guardar cambios
-                await moviesCollection.Document(movieId).SetAsync(existingMovie);
+                await moviesCollection.Document(movieId).SetAsync(movieData);
 
                 Console.WriteLine($"Película actualizada: {movieId}");
                 return existingMovie;
@@ -209,15 +210,6 @@ public class MovieService : IMovieService
 
         /// <summary>
         /// DeleteMovie: Elimina una película (solo admin)
-        /// 
-        /// Consideración importante:
-        /// Antes de eliminar, verificar que NO tiene calificaciones
-        /// Si la elimina con calificaciones, quedan "huérfanas"
-        /// 
-        /// Proceso:
-        /// 1. Verificar que la película existe
-        /// 2. Verificar que no tiene calificaciones
-        /// 3. Eliminar de Firestore
         /// </summary>
         public async Task DeleteMovie(string movieId, string adminId)
         {
@@ -266,15 +258,6 @@ public class MovieService : IMovieService
 
         /// <summary>
         /// SearchMovies: Busca películas por título (búsqueda simple)
-        /// 
-        /// Nota: Firestore no tiene búsqueda de texto completo nativa
-        /// Esta es una búsqueda simple que obtiene todas las películas
-        /// y filtra en memoria (no es escalable para muchos datos)
-        /// 
-        /// Proceso:
-        /// 1. Obtener todas las películas
-        /// 2. Filtrar por título (case-insensitive)
-        /// 3. Devolver resultados
         /// </summary>
         public async Task<List<MovieDto>> SearchMovies(string searchTerm)
         {
@@ -306,9 +289,7 @@ public class MovieService : IMovieService
 
         /// <summary>
         /// Método privado auxiliar: ConvertToDto
-        /// 
         /// Convierte un Movie (modelo interno) a MovieDto (lo que se envía al frontend)
-        /// Es privado porque solo lo usa internamente MovieService
         /// </summary>
         private MovieDto ConvertToDto(Movie movie)
         {
@@ -324,4 +305,26 @@ public class MovieService : IMovieService
                 TotalRatings = movie.TotalRatings
             };
         }
+
+        /// <summary>
+        /// Método privado auxiliar: ConvertDictToMovie
+        /// Convierte un diccionario de Firestore a objeto Movie
+        /// </summary>
+        private Movie ConvertDictToMovie(Dictionary<string, object> dict)
+        {
+            return new Movie
+            {
+                Id = dict["Id"].ToString(),
+                Title = dict["Title"].ToString(),
+                Description = dict["Description"].ToString(),
+                Genre = dict["Genre"].ToString(),
+                ReleaseYear = (int)(long)dict["ReleaseYear"],
+                PosterUrl = dict["PosterUrl"].ToString(),
+                AverageRating = Convert.ToDouble(dict["AverageRating"]),
+                TotalRatings = (int)(long)dict["TotalRatings"],
+                CreatedAt = ((Timestamp)dict["CreatedAt"]).ToDateTime(),
+                CreatedBy = dict["CreatedBy"].ToString()
+            };
+        }
+    }
 }

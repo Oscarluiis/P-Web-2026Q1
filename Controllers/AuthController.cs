@@ -1,18 +1,18 @@
 using Blockbuster.API.DTOs;
 using Blockbuster.API.Services;
-
-namespace Blockbuster.API.Controllers;
 using Microsoft.AspNetCore.Mvc;
 
-/// <summary>
-/// AuthController maneja todo lo relacionado con autenticación
-/// Endpoints para registro e inicio de sesión
-/// </summary>
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
+namespace Blockbuster.API.Controllers
 {
-    private readonly IAuthService _authService;
+    /// <summary>
+    /// AuthController maneja todo lo relacionado con autenticación
+    /// Endpoints para registro e inicio de sesión
+    /// </summary>
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AuthController : ControllerBase
+    {
+        private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
 
         /// <summary>
@@ -239,4 +239,5 @@ public class AuthController : ControllerBase
                 return StatusCode(500, new { message = "Error al obtener usuario" });
             }
         }
+    }
 }

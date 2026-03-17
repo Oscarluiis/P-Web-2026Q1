@@ -1,18 +1,19 @@
 using Blockbuster.API.DTOs;
 using Blockbuster.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-namespace Blockbuster.API.Controllers;
 
-
-/// <summary>
-/// RatingController maneja todo lo relacionado con calificaciones
-/// Endpoints para crear, obtener, editar y eliminar calificaciones
-/// </summary>
-[ApiController]
-[Route("api/[controller]")]
-public class RatingController : ControllerBase
+namespace Blockbuster.API.Controllers
 {
-    private readonly IRatingService _ratingService;
+    /// <summary>
+    /// RatingController maneja todo lo relacionado con calificaciones
+    /// Endpoints para crear, obtener, editar y eliminar calificaciones
+    /// </summary>
+    [ApiController]
+    [Route("api/[controller]")]
+    public class RatingController : ControllerBase
+    {
+        private readonly IRatingService _ratingService;
         private readonly ILogger<RatingController> _logger;
 
         /// <summary>
@@ -123,6 +124,7 @@ public class RatingController : ControllerBase
         /// 400: Score fuera de rango, usuario ya calificó, película no existe
         /// 401: No autenticado
         /// </summary>
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateRating([FromBody] CreateRatingDto createRatingDto)
         {
@@ -143,8 +145,12 @@ public class RatingController : ControllerBase
                     return BadRequest(new { message = "La calificación debe estar entre 1 y 10" });
                 }
 
-                // TODO: Obtener userId del token JWT
-                var userId = "user_123"; // Por ahora, hardcodeado
+                // Obtener el ID del usuario del token JWT
+                var userId = User.FindFirst("sub")?.Value;
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return Unauthorized(new { message = "No autenticado" });
+                }
 
                 var rating = await _ratingService.CreateRating(createRatingDto, userId);
 
@@ -187,6 +193,7 @@ public class RatingController : ControllerBase
         /// 403: No eres el propietario
         /// 401: No autenticado
         /// </summary>
+        [Authorize]
         [HttpPut("{ratingId}")]
         public async Task<IActionResult> UpdateRating(string ratingId, [FromBody] CreateRatingDto createRatingDto)
         {
@@ -207,8 +214,12 @@ public class RatingController : ControllerBase
                     return BadRequest(new { message = "La calificación debe estar entre 1 y 10" });
                 }
 
-                // TODO: Obtener userId del token JWT
-                var userId = "user_123"; // Por ahora, hardcodeado
+                // Obtener el ID del usuario del token JWT
+                var userId = User.FindFirst("sub")?.Value;
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return Unauthorized(new { message = "No autenticado" });
+                }
 
                 var rating = await _ratingService.UpdateRating(ratingId, createRatingDto, userId);
 
@@ -226,7 +237,7 @@ public class RatingController : ControllerBase
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(); // 403
+                return Forbid();
             }
             catch (Exception ex)
             {
@@ -253,6 +264,7 @@ public class RatingController : ControllerBase
         /// 403: No eres el propietario
         /// 401: No autenticado
         /// </summary>
+        [Authorize]
         [HttpDelete("{ratingId}")]
         public async Task<IActionResult> DeleteRating(string ratingId)
         {
@@ -263,14 +275,18 @@ public class RatingController : ControllerBase
                     return BadRequest(new { message = "El ID de rating es requerido" });
                 }
 
-                // TODO: Obtener userId del token JWT
-                var userId = "user_123"; // Por ahora, hardcodeado
+                // Obtener el ID del usuario del token JWT
+                var userId = User.FindFirst("sub")?.Value;
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return Unauthorized(new { message = "No autenticado" });
+                }
 
                 await _ratingService.DeleteRating(ratingId, userId);
 
                 _logger.LogInformation($"Rating eliminado: {ratingId}");
 
-                return NoContent(); // 204
+                return NoContent();
             }
             catch (InvalidOperationException ex)
             {
@@ -278,7 +294,7 @@ public class RatingController : ControllerBase
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(); // 403
+                return Forbid();
             }
             catch (Exception ex)
             {
@@ -286,4 +302,5 @@ public class RatingController : ControllerBase
                 return StatusCode(500, new { message = "Error al eliminar rating" });
             }
         }
+    }
 }

@@ -1,19 +1,20 @@
+using Blockbuster.API.DTOs;
 using Blockbuster.API.Models;
 using Blockbuster.API.Services;
-
-namespace Blockbuster.API.Controllers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-
-/// <summary>
-/// MovieController maneja todo lo relacionado con películas
-/// Endpoints para obtener, crear, editar y eliminar películas
-/// </summary>
-[ApiController]
-[Route("api/[controller]")]
-public class MovieController : ControllerBase
+namespace Blockbuster.API.Controllers
 {
-    private readonly IMovieService _movieService;
+    /// <summary>
+    /// MovieController maneja todo lo relacionado con películas
+    /// Endpoints para obtener, crear, editar y eliminar películas
+    /// </summary>
+    [ApiController]
+    [Route("api/[controller]")]
+    public class MovieController : ControllerBase
+    {
+        private readonly IMovieService _movieService;
         private readonly ILogger<MovieController> _logger;
 
         /// <summary>
@@ -140,6 +141,7 @@ public class MovieController : ControllerBase
         /// 401: No autenticado
         /// 403: No es administrador
         /// </summary>
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateMovie([FromBody] Movie movie)
         {
@@ -155,8 +157,12 @@ public class MovieController : ControllerBase
                     return BadRequest(new { message = "El título es requerido" });
                 }
 
-                // TODO: Validar que el usuario es admin (requiere token parsing)
-                var adminId = "admin_123"; // Por ahora, hardcodeado
+                // Obtener el ID del usuario del token JWT
+                var adminId = User.FindFirst("sub")?.Value;
+                if (string.IsNullOrWhiteSpace(adminId))
+                {
+                    return Unauthorized(new { message = "No autenticado" });
+                }
 
                 var createdMovie = await _movieService.CreateMovie(movie, adminId);
 
@@ -195,6 +201,7 @@ public class MovieController : ControllerBase
         /// 401: No autenticado
         /// 403: No es administrador
         /// </summary>
+        [Authorize]
         [HttpPut("{movieId}")]
         public async Task<IActionResult> UpdateMovie(string movieId, [FromBody] Movie movie)
         {
@@ -210,8 +217,12 @@ public class MovieController : ControllerBase
                     return BadRequest(new { message = "El cuerpo de la petición es requerido" });
                 }
 
-                // TODO: Validar que el usuario es admin
-                var adminId = "admin_123"; // Por ahora, hardcodeado
+                // Obtener el ID del usuario del token JWT
+                var adminId = User.FindFirst("sub")?.Value;
+                if (string.IsNullOrWhiteSpace(adminId))
+                {
+                    return Unauthorized(new { message = "No autenticado" });
+                }
 
                 var updatedMovie = await _movieService.UpdateMovie(movieId, movie, adminId);
 
@@ -253,6 +264,7 @@ public class MovieController : ControllerBase
         /// 401: No autenticado
         /// 403: No es administrador
         /// </summary>
+        [Authorize]
         [HttpDelete("{movieId}")]
         public async Task<IActionResult> DeleteMovie(string movieId)
         {
@@ -263,14 +275,18 @@ public class MovieController : ControllerBase
                     return BadRequest(new { message = "El ID de película es requerido" });
                 }
 
-                // TODO: Validar que el usuario es admin
-                var adminId = "admin_123"; // Por ahora, hardcodeado
+                // Obtener el ID del usuario del token JWT
+                var adminId = User.FindFirst("sub")?.Value;
+                if (string.IsNullOrWhiteSpace(adminId))
+                {
+                    return Unauthorized(new { message = "No autenticado" });
+                }
 
                 await _movieService.DeleteMovie(movieId, adminId);
 
                 _logger.LogInformation($"Película eliminada: {movieId}");
 
-                return NoContent(); // 204
+                return NoContent();
             }
             catch (InvalidOperationException ex)
             {
@@ -320,4 +336,5 @@ public class MovieController : ControllerBase
                 return StatusCode(500, new { message = "Error al buscar películas" });
             }
         }
+    }
 }
